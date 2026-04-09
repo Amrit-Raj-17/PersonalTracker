@@ -3,7 +3,7 @@ require '../includes/auth.php';
 require '../includes/db.php';
 require '../includes/logVisit.php';
 
-logVisit('loginPage');
+logVisit('dashboardPage');
 
 $userId = $_SESSION['user_id'];
 
