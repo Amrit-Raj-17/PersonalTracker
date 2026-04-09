@@ -8,6 +8,9 @@ RUN apt-get update && apt-get install -y \
 
 COPY . /var/www/html/
 
-RUN a2enmod rewrite
+RUN sed -ri -e 's!/var/www/html!/var/www/html/public!g' \
+    /etc/apache2/sites-available/*.conf \
+    /etc/apache2/apache2.conf \
+    /etc/apache2/conf-available/*.conf
 
-WORKDIR /var/www/html/public
+RUN a2enmod rewrite
