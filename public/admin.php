@@ -1,6 +1,9 @@
 <?php
 require '../includes/auth.php';
 require '../includes/db.php';
+require '../includes/logVisit.php';
+
+logVisit('adminPage');
 
 if ($_SESSION['role'] !== 'admin') {
     die('Access denied');

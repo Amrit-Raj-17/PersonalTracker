@@ -1,6 +1,9 @@
 <?php
 session_start();
 require_once "../includes/db.php";
+require_once '../includes/logVisit.php';
+
+logVisit('tasksPage');
 
 if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
