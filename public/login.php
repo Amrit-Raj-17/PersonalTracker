@@ -5,11 +5,12 @@ require '../includes/db.php';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $email = $_POST['email'];
+    $email = trim($_POST['email']);
     $password = $_POST['password'];
 
     $stmt = $pdo->prepare("SELECT * FROM users WHERE email = ?");
     $stmt->execute([$email]);
+
     $user = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if ($user && password_verify($password, $user['password'])) {
@@ -17,10 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $_SESSION['name'] = $user['name'];
         $_SESSION['role'] = $user['role'];
 
-        header('Location: dashboard.php');
+        header("Location: dashboard.php");
         exit;
     } else {
-        $error = 'Invalid email or password';
+        $error = "Invalid email or password";
     }
 }
 ?>
@@ -36,7 +37,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         <h1>Work Tracker Login</h1>
 
         <?php if ($error): ?>
-            <p class="error"><?= $error ?></p>
+            <div class="error"><?= $error ?></div>
         <?php endif; ?>
 
         <form method="POST">

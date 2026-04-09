@@ -6,13 +6,13 @@ $userId = $_SESSION['user_id'];
 
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE user_id = ?");
 $stmt->execute([$userId]);
-$totalTasks = $stmt->fetchColumn();
+$total = $stmt->fetchColumn();
 
 $stmt = $pdo->prepare("SELECT COUNT(*) FROM tasks WHERE user_id = ? AND completed = true");
 $stmt->execute([$userId]);
-$completedTasks = $stmt->fetchColumn();
+$completed = $stmt->fetchColumn();
 
-$pendingTasks = $totalTasks - $completedTasks;
+$pending = $total - $completed;
 ?>
 
 <!DOCTYPE html>
@@ -23,8 +23,10 @@ $pendingTasks = $totalTasks - $completedTasks;
 </head>
 <body>
     <nav>
-        <h2>Welcome, <?= $_SESSION['name'] ?></h2>
+        <h2>Hello, <?= htmlspecialchars($_SESSION['name']) ?></h2>
+
         <div>
+            <a href="dashboard.php">Dashboard</a>
             <a href="tasks.php">My Tasks</a>
 
             <?php if ($_SESSION['role'] === 'admin'): ?>
@@ -38,17 +40,17 @@ $pendingTasks = $totalTasks - $completedTasks;
     <div class="cards">
         <div class="card">
             <h3>Total Tasks</h3>
-            <p><?= $totalTasks ?></p>
+            <p><?= $total ?></p>
         </div>
 
         <div class="card">
             <h3>Completed</h3>
-            <p><?= $completedTasks ?></p>
+            <p><?= $completed ?></p>
         </div>
 
         <div class="card">
             <h3>Pending</h3>
-            <p><?= $pendingTasks ?></p>
+            <p><?= $pending ?></p>
         </div>
     </div>
 </body>
