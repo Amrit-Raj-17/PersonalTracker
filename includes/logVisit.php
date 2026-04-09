@@ -26,7 +26,7 @@ function logVisit($pageName)
             user_agent,
             visited_at
         )
-        VALUES (?, ?, ?, ?, NOW())
+        VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '+05:30'))
     ");
 
     $stmt->execute([
