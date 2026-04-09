@@ -5,11 +5,11 @@ require '../includes/db.php';
 $userId = $_SESSION['user_id'];
 
 $stmt = $pdo->prepare("SELECT * FROM visits;");
-$stmt->execute([$userId]);
+$stmt->execute();
 $visitData = $stmt->fetchColumn();
 
 $stmt = $pdo->prepare("SELECT * FROM users;");
-$stmt->execute([$userId]);
+$stmt->execute();
 $usersData = $stmt->fetchColumn();
 ?>
 
