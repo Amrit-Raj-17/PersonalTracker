@@ -9,12 +9,7 @@ function logVisit($pageName)
         session_start();
     }
 
-    $userId = null;
-
-    if (isset($_SESSION['user_id'])) {
-        $userId = $_SESSION['user_id'];
-    }
-
+    $userId = $_SESSION['user_id'] ?? null;
     $ipAddress = $_SERVER['REMOTE_ADDR'] ?? null;
     $userAgent = $_SERVER['HTTP_USER_AGENT'] ?? null;
 
@@ -26,7 +21,7 @@ function logVisit($pageName)
             user_agent,
             visited_at
         )
-        VALUES (?, ?, ?, ?, CONVERT_TZ(NOW(), '+00:00', '+05:30'))
+        VALUES (?, ?, ?, ?, NOW() AT TIME ZONE 'Asia/Kolkata')
     ");
 
     $stmt->execute([
