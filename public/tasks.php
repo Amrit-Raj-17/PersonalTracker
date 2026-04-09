@@ -1,15 +1,15 @@
 <?php
 session_start();
-
 require_once "../includes/db.php";
 
-if (!isset($_SESSION['user'])) {
+if (!isset($_SESSION['user_id'])) {
     header("Location: index.php");
     exit();
 }
 
-$userId = $_SESSION['user']['id'];
-$role = $_SESSION['user']['role'];
+$userId = $_SESSION['user_id'];
+$role = $_SESSION['role'];
+$name = $_SESSION['name'];
 
 // Add task
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_task'])) {
@@ -173,7 +173,7 @@ if ($role === 'admin') {
         <div class="topbar-right">
             <span>
                 Welcome,
-                <?= htmlspecialchars($_SESSION['user']['name']) ?>
+                <?= htmlspecialchars($name) ?>
                 (<?= htmlspecialchars($role) ?>)
             </span>
             <a href="logout.php" class="btn btn-danger">Logout</a>
