@@ -1,36 +1,4 @@
 <?php
-require '../includes/auth.php';
-require '../includes/db.php';
-
-$userId = $_SESSION['user_id'];
-
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $title = $_POST['title'];
-    $description = $_POST['description'];
-    $category = $_POST['category'];
-    $priority = $_POST['priority'];
-    $progress = (int) $_POST['progress'];
-
-    $completed = $progress >= 100;
-
-    $stmt = $pdo->prepare(
-        "INSERT INTO tasks(user_id, title, description, category, priority, progress, completed, completed_at)
-         VALUES (?, ?, ?, ?, ?, ?, ?, ?)"
-    );
-
-    $stmt->execute([
-        $userId,
-        $title,
-        $description,
-        $category,
-        $priority,
-        $progress,
-        $completed,
-        $completed ? date('Y-m-d H:i:s') : null
-    ]);
-}
-
-$stmt = $pdo->prepare("SELECT * FROM tasks WHERE user_id = ? AND completed = false ORDER BY created_at DESC");
 $stmt->execute([$userId]);
 $activeTasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -57,4 +25,39 @@ $completedTasks = $stmt->fetchAll(PDO::FETCH_ASSOC);
             <option>Home</option>
             <option>Shopping</option>
             <option>Office</option>
+            <option>Health</option>
+        </select>
+
+        <select name="priority">
+            <option>Low</option>
+            <option>Medium</option>
+            <option>High</option>
+            <option>Urgent</option>
+        </select>
+
+        <input type="range" name="progress" min="0" max="100" value="0">
+
+        <button type="submit">Add Task</button>
+    </form>
+
+    <h2>Active Tasks</h2>
+
+    <?php foreach ($activeTasks as $task): ?>
+        <div class="task-card">
+            <h3><?= htmlspecialchars($task['title']) ?></h3>
+            <p><?= htmlspecialchars($task['description']) ?></p>
+            <p><?= $task['progress'] ?>% Complete</p>
+        </div>
+    <?php endforeach; ?>
+
+    <h2>Completed Tasks</h2>
+
+    <?php foreach ($completedTasks as $task): ?>
+        <div class="task-card completed">
+            <h3><?= htmlspecialchars($task['title']) ?></h3>
+            <p><?= htmlspecialchars($task['description']) ?></p>
+            <p>Completed on <?= $task['completed_at'] ?></p>
+        </div>
+    <?php endforeach; ?>
+</body>
 </html>
