@@ -2,17 +2,18 @@
 require '../includes/auth.php';
 require '../includes/db.php';
 
-$userId = $_SESSION['user_id'];
+$userId = $_SESSION['user_id'] ?? null;
 
-$stmt = $pdo->prepare("SELECT * FROM visits;");
+// Fetch all visits
+$stmt = $pdo->prepare("SELECT * FROM visits");
 $stmt->execute();
-$visitData = $stmt->fetchColumn();
+$visitData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-$stmt = $pdo->prepare("SELECT * FROM users;");
+// Fetch all users
+$stmt = $pdo->prepare("SELECT * FROM users");
 $stmt->execute();
-$usersData = $stmt->fetchColumn();
+$usersData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 ?>
-
 
 <!DOCTYPE html>
 <html>
@@ -21,11 +22,18 @@ $usersData = $stmt->fetchColumn();
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+
+<h1>Visits Dashboard</h1>
+
 </body>
-    <script>
-        const visitData = <?php echo json_encode($visitData)?>
-        const userData = <?php echo json_encode($userData)?>
-        console.log(visitData);
-        console.log(userData);
-    </script>
+
+<script>
+    const visitData = <?php echo json_encode($visitData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+    const userData = <?php echo json_encode($usersData, JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT); ?>;
+
+    console.log("Visits:", visitData);
+    console.log("Users:", userData);
+
+</script>
+
 </html>
