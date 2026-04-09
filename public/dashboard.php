@@ -34,6 +34,7 @@ $pending = $total - $completed;
 
             <?php if ($_SESSION['role'] === 'admin'): ?>
                 <a href="admin.php">Admin Panel</a>
+                <a href="visits.php">Visits</a>
             <?php endif; ?>
 
             <a href="logout.php">Logout</a>
