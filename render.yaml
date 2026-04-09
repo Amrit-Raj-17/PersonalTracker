@@ -1,0 +1,6 @@
+services:
+  - type: web
+    name: personaltracker
+    env: docker
+    repo: https://github.com/amrit-raj-17/PersonalTracker
+    branch: main
