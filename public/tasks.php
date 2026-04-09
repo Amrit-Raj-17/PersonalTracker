@@ -51,6 +51,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['update_task'])) {
     $progress = (int)$_POST['progress'];
     $dueDate = !empty($_POST['due_date']) ? $_POST['due_date'] : null;
 
+    if($status == 'Completed') {
+        $progress = 100;
+    }
     $completed = $progress >= 100 ? 1 : 0;
     $completedAt = $completed ? date("Y-m-d H:i:s") : null;
 
