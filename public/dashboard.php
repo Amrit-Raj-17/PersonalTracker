@@ -223,7 +223,7 @@ $activePage = 'dashboard';
 </head>
 <body>
 <div class="shell">
-    <?php include __DIR__ . '/sidebar.php'; ?>
+    <?php include '../includes/sidebar.php'; ?>
 
     <main class="main">
         <div class="page-header">
