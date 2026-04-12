@@ -1,4 +1,6 @@
+DROP TABLE IF EXISTS notes;
 DROP TABLE IF EXISTS tasks;
+DROP TABLE IF EXISTS visits;
 DROP TABLE IF EXISTS users;
 
 CREATE TABLE users (
@@ -31,46 +33,27 @@ CREATE TABLE tasks (
         ON DELETE CASCADE
 );
 
--- Optional starter admin account
--- Password below is only an example hash for: admin123
-/*
-INSERT INTO users (name, email, password, role)
-VALUES (
-    'Admin',
-    'admin@example.com',
-    '$2y$10$u0S1nY2i4slU3n6xS5uN2u9eTq0UqL5.2XvG4m4t8c2M0rJ0h8f6K',
-    'admin'
+CREATE TABLE notes (
+    id SERIAL PRIMARY KEY,
+    user_id INT NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    content TEXT,
+    color VARCHAR(20) DEFAULT 'yellow',
+    pinned BOOLEAN DEFAULT FALSE,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_note_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
 );
 
--- Example tasks
-INSERT INTO tasks (
-    user_id,
-    title,
-    description,
-    category,
-    priority,
-    status,
-    progress,
-    completed
-)
-VALUES
-(
-    1,
-    'Setup Work Tracker',
-    'Create database and login system',
-    'Project',
-    'High',
-    'In Progress',
-    60,
-    FALSE
-),
-(
-    1,
-    'Finish Dashboard Design',
-    'Complete cards and task list UI',
-    'Project',
-    'Medium',
-    'Completed',
-    100,
-    TRUE
+CREATE TABLE visits (
+    id SERIAL PRIMARY KEY,
+    user_id INT,
+    page_name VARCHAR(100),
+    ip_address VARCHAR(50),
+    user_agent TEXT,
+    visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
