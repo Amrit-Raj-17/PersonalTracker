@@ -74,7 +74,6 @@ if ($role === 'admin') {
 $tasks = $taskStmt->fetchAll(PDO::FETCH_ASSOC);
 
 $activePage = 'dashboard';
-include '../includes/sidebar.php';
 ?>
 <!DOCTYPE html>
 <html lang="en">
