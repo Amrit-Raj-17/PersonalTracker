@@ -57,3 +57,35 @@ CREATE TABLE visits (
     user_agent TEXT,
     visited_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 );
+
+CREATE TABLE todos (
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    created_by INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT fk_todo_creator
+        FOREIGN KEY(created_by)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
+
+CREATE TABLE todo_completions (
+    id SERIAL PRIMARY KEY,
+    todo_id INT NOT NULL,
+    user_id INT NOT NULL,
+    date DATE NOT NULL,
+    completed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+
+    UNIQUE(todo_id, user_id, date),
+
+    CONSTRAINT fk_tc_todo
+        FOREIGN KEY(todo_id)
+        REFERENCES todos(id)
+        ON DELETE CASCADE,
+
+    CONSTRAINT fk_tc_user
+        FOREIGN KEY(user_id)
+        REFERENCES users(id)
+        ON DELETE CASCADE
+);
