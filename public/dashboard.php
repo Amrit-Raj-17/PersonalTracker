@@ -15,65 +15,120 @@ $role   = $_SESSION['role'];
 $name   = $_SESSION['name'];
 $today  = date('Y-m-d');
 
-// Admin: Add todo item
+// ── Admin: Add todo with user assignments ──────────────────────────
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['add_todo']) && $role === 'admin') {
-    $todoTitle = trim($_POST['todo_title']);
+    $todoTitle   = trim($_POST['todo_title']);
+    $assignedIds = isset($_POST['assigned_users']) ? array_map('intval', $_POST['assigned_users']) : [];
+
     if (!empty($todoTitle)) {
-        $stmt = $pdo->prepare("INSERT INTO todos (title, created_by) VALUES (?, ?)");
+        $stmt = $pdo->prepare("INSERT INTO todos (title, created_by) VALUES (?, ?) RETURNING id");
         $stmt->execute([$todoTitle, $userId]);
+        $newTodoId = $stmt->fetchColumn();
+
+        // Insert assignments (if none selected, todo is visible to all)
+        foreach ($assignedIds as $uid) {
+            $pdo->prepare("INSERT INTO todo_assignments (todo_id, user_id) VALUES (?, ?) ON CONFLICT DO NOTHING")
+                ->execute([$newTodoId, $uid]);
+        }
     }
     header("Location: dashboard.php");
     exit;
 }
 
-// Admin: Delete todo item
+// ── Admin: Delete todo ─────────────────────────────────────────────
 if (isset($_GET['delete_todo']) && $role === 'admin') {
-    $stmt = $pdo->prepare("DELETE FROM todos WHERE id = ?");
-    $stmt->execute([(int)$_GET['delete_todo']]);
+    $pdo->prepare("DELETE FROM todos WHERE id = ?")->execute([(int)$_GET['delete_todo']]);
     header("Location: dashboard.php");
     exit;
 }
 
-// Toggle todo completion (any user, today only)
+// ── Toggle completion — any user for themselves, admin for anyone ───
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['toggle_todo'])) {
-    $todoId = (int)$_POST['todo_id'];
+    $todoId     = (int)$_POST['todo_id'];
+    $targetUser = (int)$_POST['target_user_id'];
+    $date       = $_POST['toggle_date'] ?? $today;
+
+    // Non-admin can only toggle themselves, only today
+    if ($role !== 'admin') {
+        $targetUser = $userId;
+        $date       = $today;
+    }
+
+    // Validate date format
+    if (!preg_match('/^\d{4}-\d{2}-\d{2}$/', $date)) {
+        $date = $today;
+    }
+
     $check = $pdo->prepare("SELECT id FROM todo_completions WHERE todo_id=? AND user_id=? AND date=?");
-    $check->execute([$todoId, $userId, $today]);
+    $check->execute([$todoId, $targetUser, $date]);
+
     if ($check->fetch()) {
         $pdo->prepare("DELETE FROM todo_completions WHERE todo_id=? AND user_id=? AND date=?")
-            ->execute([$todoId, $userId, $today]);
+            ->execute([$todoId, $targetUser, $date]);
     } else {
         $pdo->prepare("INSERT INTO todo_completions (todo_id, user_id, date) VALUES (?,?,?)
                        ON CONFLICT (todo_id, user_id, date) DO NOTHING")
-            ->execute([$todoId, $userId, $today]);
+            ->execute([$todoId, $targetUser, $date]);
     }
-    header("Location: dashboard.php");
+
+    // Stay on same view_date if admin was browsing a past date
+    $redirect = 'dashboard.php';
+    if ($role === 'admin' && isset($_POST['view_date'])) {
+        $redirect .= '?view_date=' . urlencode($_POST['view_date']);
+    }
+    header("Location: $redirect");
     exit;
 }
 
-// Admin: view completions for a chosen date
+// ── Admin: chosen history date ─────────────────────────────────────
 $viewDate = $today;
 if ($role === 'admin' && isset($_GET['view_date']) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $_GET['view_date'])) {
     $viewDate = $_GET['view_date'];
 }
 
-// Fetch todos with MY completion status for today
-$todosStmt = $pdo->prepare("
-    SELECT todos.*,
-           CASE WHEN tc.id IS NOT NULL THEN true ELSE false END AS done_by_me
-    FROM todos
-    LEFT JOIN todo_completions tc
-        ON tc.todo_id = todos.id AND tc.user_id = ? AND tc.date = ?
-    ORDER BY todos.created_at ASC
-");
-$todosStmt->execute([$userId, $today]);
+// ── All users list (needed for admin forms + grid) ─────────────────
+$allUsers = $pdo->query("SELECT id, name FROM users ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+
+// ── Fetch todos visible to current user ────────────────────────────
+// A todo is visible if:
+//   (a) it has no assignments at all (global), OR
+//   (b) current user is in its assignments, OR
+//   (c) current user is admin (sees all)
+if ($role === 'admin') {
+    $todosStmt = $pdo->prepare("
+        SELECT todos.*,
+               CASE WHEN tc.id IS NOT NULL THEN true ELSE false END AS done_by_me,
+               COALESCE(
+                   (SELECT string_agg(ta.user_id::text, ',')
+                    FROM todo_assignments ta WHERE ta.todo_id = todos.id),
+                   ''
+               ) AS assigned_ids
+        FROM todos
+        LEFT JOIN todo_completions tc
+            ON tc.todo_id = todos.id AND tc.user_id = ? AND tc.date = ?
+        ORDER BY todos.created_at ASC
+    ");
+    $todosStmt->execute([$userId, $today]);
+} else {
+    $todosStmt = $pdo->prepare("
+        SELECT todos.*,
+               CASE WHEN tc.id IS NOT NULL THEN true ELSE false END AS done_by_me
+        FROM todos
+        LEFT JOIN todo_completions tc
+            ON tc.todo_id = todos.id AND tc.user_id = ? AND tc.date = ?
+        WHERE
+            -- global todo (no assignments) OR assigned to this user
+            NOT EXISTS (SELECT 1 FROM todo_assignments ta WHERE ta.todo_id = todos.id)
+            OR EXISTS  (SELECT 1 FROM todo_assignments ta WHERE ta.todo_id = todos.id AND ta.user_id = ?)
+        ORDER BY todos.created_at ASC
+    ");
+    $todosStmt->execute([$userId, $today, $userId]);
+}
 $todos = $todosStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Admin: fetch all users and completion grid for viewDate
+// ── Admin: completion grid for viewDate ────────────────────────────
 $completionGrid = [];
-$allUsers = [];
 if ($role === 'admin') {
-    $allUsers = $pdo->query("SELECT id, name FROM users ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
     $compStmt = $pdo->prepare("SELECT todo_id, user_id FROM todo_completions WHERE date = ?");
     $compStmt->execute([$viewDate]);
     foreach ($compStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
@@ -81,7 +136,7 @@ if ($role === 'admin') {
     }
 }
 
-// Stats
+// ── Stats ──────────────────────────────────────────────────────────
 if ($role === 'admin') {
     $totalTasks     = $pdo->query("SELECT COUNT(*) FROM tasks")->fetchColumn();
     $activeTasks    = $pdo->query("SELECT COUNT(*) FROM tasks WHERE completed = false")->fetchColumn();
@@ -98,7 +153,7 @@ if ($role === 'admin') {
     $s->execute([$userId]); $totalNotes = $s->fetchColumn();
 }
 
-// Notes
+// ── Notes ──────────────────────────────────────────────────────────
 if ($role === 'admin') {
     $noteStmt = $pdo->query("
         SELECT notes.*, users.name AS user_name FROM notes
@@ -111,7 +166,7 @@ if ($role === 'admin') {
 }
 $notes = $noteStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Active Tasks
+// ── Active Tasks ───────────────────────────────────────────────────
 if ($role === 'admin') {
     $taskStmt = $pdo->query("
         SELECT tasks.*, users.name AS user_name FROM tasks
@@ -181,44 +236,150 @@ $activePage = 'dashboard';
         }
         .todo-item.done { background: #0d1f10; border-color: #1a4025; }
         .todo-item.done .todo-text { text-decoration: line-through; color: var(--muted); }
-        .todo-checkbox { width: 18px; height: 18px; accent-color: var(--success); cursor: pointer; flex-shrink: 0; }
+        .todo-checkbox {
+            width: 18px; height: 18px; accent-color: var(--success);
+            cursor: pointer; flex-shrink: 0;
+        }
         .todo-text { flex: 1; font-size: 14px; color: var(--text); }
+        .todo-assigned-tags {
+            display: flex; flex-wrap: wrap; gap: 4px;
+        }
+        .todo-assigned-tag {
+            font-size: 10px;
+            background: var(--surface);
+            color: var(--accent);
+            border: 1px solid var(--border);
+            padding: 2px 7px;
+            border-radius: 999px;
+            white-space: nowrap;
+        }
+        .todo-assigned-tag.global {
+            color: var(--muted);
+        }
         .todo-delete {
-            background: none; border: none; color: var(--muted); cursor: pointer;
-            font-size: 15px; padding: 0; width: auto; margin: 0;
-            transition: color 0.2s; line-height: 1;
+            background: none; border: none; color: var(--muted);
+            cursor: pointer; font-size: 15px; padding: 0;
+            width: auto; margin: 0; transition: color 0.2s; line-height: 1;
         }
         .todo-delete:hover { color: var(--danger); background: none; }
+
+        /* Add todo form */
         .todo-add-form {
-            display: flex; gap: 8px; margin-top: 16px;
-            padding-top: 14px; border-top: 1px solid var(--border);
+            margin-top: 16px;
+            padding-top: 16px;
+            border-top: 1px solid var(--border);
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
         }
-        .todo-add-form input { flex: 1; margin: 0; padding: 9px 13px; font-size: 13px; }
-        .todo-add-form button { width: auto; margin: 0; padding: 9px 16px; white-space: nowrap; }
+        .todo-add-row {
+            display: flex; gap: 8px;
+        }
+        .todo-add-row input { flex: 1; margin: 0; padding: 9px 13px; font-size: 13px; }
+        .todo-add-row button { width: auto; margin: 0; padding: 9px 16px; white-space: nowrap; }
+        .todo-assign-section { display: flex; flex-direction: column; gap: 6px; }
+        .todo-assign-label {
+            font-size: 11px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;
+        }
+        .todo-assign-users {
+            display: flex; flex-wrap: wrap; gap: 8px;
+        }
+        .todo-assign-users label {
+            display: flex; align-items: center; gap: 6px;
+            font-size: 13px; color: var(--text);
+            background: var(--surface2);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 6px 12px;
+            cursor: pointer;
+            transition: border-color 0.2s;
+        }
+        .todo-assign-users label:hover { border-color: var(--accent); }
+        .todo-assign-users input[type="checkbox"] {
+            width: 14px; height: 14px; margin: 0;
+            accent-color: var(--accent);
+        }
+        .todo-assign-users label:has(input:checked) {
+            border-color: var(--accent);
+            background: #0d1525;
+            color: var(--accent);
+        }
+
         .todo-empty { text-align: center; color: var(--muted); font-size: 13px; padding: 16px 0 8px; }
-        .completion-grid { margin-top: 20px; padding-top: 18px; border-top: 1px solid var(--border); }
-        .completion-grid h4 {
-            font-size: 13px; color: var(--muted); text-transform: uppercase;
-            letter-spacing: 0.5px; margin-bottom: 14px;
-            display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+
+        /* Completion grid */
+        .completion-grid {
+            margin-top: 20px;
+            padding-top: 18px;
+            border-top: 1px solid var(--border);
+        }
+        .completion-grid-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            flex-wrap: wrap;
+            margin-bottom: 14px;
+        }
+        .completion-grid-header h4 {
+            font-size: 13px; color: var(--muted);
+            text-transform: uppercase; letter-spacing: 0.5px;
+            font-weight: 600; margin: 0;
         }
         .completion-date-form { display: inline-flex; align-items: center; gap: 6px; }
         .completion-date-form input[type="date"] {
-            padding: 4px 10px; font-size: 12px; background: var(--surface2);
-            border: 1px solid var(--border); border-radius: 6px;
-            color: var(--text); margin: 0;
+            padding: 4px 10px; font-size: 12px;
+            background: var(--surface2); border: 1px solid var(--border);
+            border-radius: 6px; color: var(--text); margin: 0;
         }
-        .completion-date-form button { padding: 4px 10px; font-size: 12px; width: auto; margin: 0; border-radius: 6px; }
+        .completion-date-form button {
+            padding: 4px 10px; font-size: 12px;
+            width: auto; margin: 0; border-radius: 6px;
+        }
         .comp-table { width: 100%; border-collapse: collapse; font-size: 13px; }
         .comp-table th {
-            padding: 8px 12px; text-align: left; font-size: 11px; font-weight: 600;
-            text-transform: uppercase; letter-spacing: 0.4px;
-            color: var(--muted); border-bottom: 1px solid var(--border);
+            padding: 8px 12px; text-align: center; font-size: 11px;
+            font-weight: 600; text-transform: uppercase;
+            letter-spacing: 0.4px; color: var(--muted);
+            border-bottom: 1px solid var(--border);
         }
-        .comp-table td { padding: 9px 12px; border-bottom: 1px solid var(--border); }
+        .comp-table th.item-col { text-align: left; }
+        .comp-table td {
+            padding: 9px 12px; border-bottom: 1px solid var(--border);
+            text-align: center;
+        }
+        .comp-table td.item-col { text-align: left; }
         .comp-table tr:last-child td { border-bottom: none; }
-        .comp-tick { color: var(--success); font-size: 15px; }
-        .comp-cross { color: var(--border); font-size: 15px; }
+        .comp-table tr:hover td { background: rgba(255,255,255,0.02); }
+
+        /* Clickable toggle cells */
+        .comp-toggle {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            width: 28px; height: 28px;
+            border-radius: 6px;
+            cursor: pointer;
+            border: none;
+            background: transparent;
+            font-size: 16px;
+            transition: background 0.15s;
+            margin: 0; padding: 0; width: auto;
+        }
+        .comp-toggle.is-done {
+            color: var(--success);
+        }
+        .comp-toggle.is-done:hover { background: #0d2018; }
+        .comp-toggle.is-empty {
+            color: var(--border);
+        }
+        .comp-toggle.is-empty:hover { background: var(--surface2); color: var(--muted); }
+
+        /* Not applicable cell (todo not assigned to this user) */
+        .comp-na {
+            color: var(--border);
+            font-size: 11px;
+        }
     </style>
 </head>
 <body>
@@ -226,6 +387,7 @@ $activePage = 'dashboard';
     <?php include '../includes/sidebar.php'; ?>
 
     <main class="main">
+        <!-- Header -->
         <div class="page-header">
             <h2>Good <?= date('H') < 12 ? 'morning' : (date('H') < 18 ? 'afternoon' : 'evening') ?>,
                 <?= htmlspecialchars(explode(' ', $name)[0]) ?>
@@ -256,7 +418,7 @@ $activePage = 'dashboard';
             </div>
         </div>
 
-        <!-- Daily Todo / Checklist -->
+        <!-- Daily Checklist -->
         <div class="todo-section">
             <div class="todo-header">
                 <h3>
@@ -265,19 +427,28 @@ $activePage = 'dashboard';
                 </h3>
             </div>
 
+            <!-- Todo items -->
             <?php if (empty($todos)): ?>
                 <div class="todo-empty">
                     <?= $role === 'admin'
                         ? 'No checklist items yet. Add one below.'
-                        : 'No checklist items have been added by admin yet.' ?>
+                        : 'No checklist items assigned to you yet.' ?>
                 </div>
             <?php else: ?>
                 <div class="todo-items">
-                    <?php foreach ($todos as $todo): ?>
+                    <?php foreach ($todos as $todo):
+                        // Parse assigned user IDs for display
+                        $assignedIds = isset($todo['assigned_ids']) && $todo['assigned_ids'] !== ''
+                            ? array_map('intval', explode(',', $todo['assigned_ids']))
+                            : [];
+                    ?>
                         <div class="todo-item <?= $todo['done_by_me'] ? 'done' : '' ?>">
+                            <!-- Checkbox (toggle for self/today) -->
                             <form method="POST" style="display:contents;">
                                 <input type="hidden" name="toggle_todo" value="1">
                                 <input type="hidden" name="todo_id" value="<?= $todo['id'] ?>">
+                                <input type="hidden" name="target_user_id" value="<?= $userId ?>">
+                                <input type="hidden" name="toggle_date" value="<?= $today ?>">
                                 <input
                                     type="checkbox"
                                     class="todo-checkbox"
@@ -285,8 +456,22 @@ $activePage = 'dashboard';
                                     onchange="this.form.submit()"
                                 >
                             </form>
+
                             <span class="todo-text"><?= htmlspecialchars($todo['title']) ?></span>
+
+                            <!-- Assigned-to tags (admin only) -->
                             <?php if ($role === 'admin'): ?>
+                                <div class="todo-assigned-tags">
+                                    <?php if (empty($assignedIds)): ?>
+                                        <span class="todo-assigned-tag global">Everyone</span>
+                                    <?php else: ?>
+                                        <?php foreach ($allUsers as $u):
+                                            if (in_array($u['id'], $assignedIds)): ?>
+                                                <span class="todo-assigned-tag"><?= htmlspecialchars($u['name']) ?></span>
+                                        <?php endif; endforeach; ?>
+                                    <?php endif; ?>
+                                </div>
+
                                 <button
                                     class="todo-delete"
                                     onclick="if(confirm('Remove this checklist item?'))window.location='dashboard.php?delete_todo=<?= $todo['id'] ?>'">
@@ -315,20 +500,33 @@ $activePage = 'dashboard';
                 </div>
             <?php endif; ?>
 
-            <!-- Admin: add item form -->
+            <!-- Admin: Add todo form with user checkboxes -->
             <?php if ($role === 'admin'): ?>
                 <form method="POST" class="todo-add-form">
                     <input type="hidden" name="add_todo" value="1">
-                    <input type="text" name="todo_title" placeholder="Add checklist item…" required>
-                    <button type="submit" class="btn btn-primary btn-sm">+ Add</button>
+                    <div class="todo-add-row">
+                        <input type="text" name="todo_title" placeholder="Add checklist item…" required>
+                        <button type="submit" class="btn btn-primary btn-sm">+ Add</button>
+                    </div>
+                    <div class="todo-assign-section">
+                        <div class="todo-assign-label">Assign to (leave all unchecked = everyone)</div>
+                        <div class="todo-assign-users">
+                            <?php foreach ($allUsers as $u): ?>
+                                <label>
+                                    <input type="checkbox" name="assigned_users[]" value="<?= $u['id'] ?>" checked>
+                                    <?= htmlspecialchars($u['name']) ?>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+                    </div>
                 </form>
             <?php endif; ?>
 
-            <!-- Admin: historical completion grid -->
+            <!-- Admin: Historical completion grid (editable) -->
             <?php if ($role === 'admin'): ?>
                 <div class="completion-grid">
-                    <h4>
-                        Completion History
+                    <div class="completion-grid-header">
+                        <h4>Completion History</h4>
                         <form method="GET" class="completion-date-form">
                             <input
                                 type="date"
@@ -338,20 +536,33 @@ $activePage = 'dashboard';
                             >
                             <button type="submit" class="btn btn-ghost btn-sm">View</button>
                         </form>
-                        <span style="font-size:11px;color:var(--muted);font-weight:400;">
-                            Showing: <?= date('d M Y', strtotime($viewDate)) ?>
-                            <?= $viewDate === $today ? '(Today)' : '' ?>
+                        <span style="font-size:11px;color:var(--muted);">
+                            <?= date('d M Y', strtotime($viewDate)) ?>
+                            <?= $viewDate === $today ? '· Today' : '' ?>
+                            — click ✓/— to toggle
                         </span>
-                    </h4>
+                    </div>
 
                     <?php if (empty($todos)): ?>
                         <p style="color:var(--muted);font-size:13px;">No items to show.</p>
                     <?php else: ?>
+                        <?php
+                        // Build assigned_ids lookup for grid
+                        $todoAssignedMap = [];
+                        if (!empty($todos)) {
+                            $tidList = implode(',', array_column($todos, 'id'));
+                            $asgRows = $pdo->query("SELECT todo_id, user_id FROM todo_assignments WHERE todo_id IN ($tidList)")
+                                          ->fetchAll(PDO::FETCH_ASSOC);
+                            foreach ($asgRows as $ar) {
+                                $todoAssignedMap[$ar['todo_id']][] = $ar['user_id'];
+                            }
+                        }
+                        ?>
                         <div style="overflow-x:auto;">
                             <table class="comp-table">
                                 <thead>
                                     <tr>
-                                        <th>Checklist Item</th>
+                                        <th class="item-col">Checklist Item</th>
                                         <?php foreach ($allUsers as $u): ?>
                                             <th><?= htmlspecialchars($u['name']) ?></th>
                                         <?php endforeach; ?>
@@ -360,15 +571,31 @@ $activePage = 'dashboard';
                                 <tbody>
                                     <?php foreach ($todos as $todo): ?>
                                         <tr>
-                                            <td style="color:var(--text);font-weight:500;">
+                                            <td class="item-col" style="color:var(--text);font-weight:500;">
                                                 <?= htmlspecialchars($todo['title']) ?>
                                             </td>
-                                            <?php foreach ($allUsers as $u): ?>
+                                            <?php foreach ($allUsers as $u):
+                                                // Check if this user is assigned (or todo is global)
+                                                $isGlobal   = empty($todoAssignedMap[$todo['id']]);
+                                                $isAssigned = $isGlobal || in_array($u['id'], $todoAssignedMap[$todo['id']] ?? []);
+                                                $isDone     = !empty($completionGrid[$todo['id']][$u['id']]);
+                                            ?>
                                                 <td>
-                                                    <?php if (!empty($completionGrid[$todo['id']][$u['id']])): ?>
-                                                        <span class="comp-tick">✓</span>
+                                                    <?php if ($isAssigned): ?>
+                                                        <form method="POST" style="display:inline;">
+                                                            <input type="hidden" name="toggle_todo" value="1">
+                                                            <input type="hidden" name="todo_id" value="<?= $todo['id'] ?>">
+                                                            <input type="hidden" name="target_user_id" value="<?= $u['id'] ?>">
+                                                            <input type="hidden" name="toggle_date" value="<?= $viewDate ?>">
+                                                            <input type="hidden" name="view_date" value="<?= $viewDate ?>">
+                                                            <button
+                                                                type="submit"
+                                                                class="comp-toggle <?= $isDone ? 'is-done' : 'is-empty' ?>"
+                                                                title="<?= $isDone ? 'Mark incomplete' : 'Mark complete' ?> for <?= htmlspecialchars($u['name']) ?>"
+                                                            ><?= $isDone ? '✓' : '—' ?></button>
+                                                        </form>
                                                     <?php else: ?>
-                                                        <span class="comp-cross">—</span>
+                                                        <span class="comp-na" title="Not assigned">·</span>
                                                     <?php endif; ?>
                                                 </td>
                                             <?php endforeach; ?>
