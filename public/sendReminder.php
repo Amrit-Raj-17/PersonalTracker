@@ -10,7 +10,7 @@ spl_autoload_register(function ($class) {
     }
 
     // Convert namespace → file path
-    $path = __DIR__ . '/../sendgrid/' . str_replace('\\', '/', $class) . '.php';
+    $path = __DIR__ . './sendgrid/' . str_replace('\\', '/', $class) . '.php';
 
     if (file_exists($path)) {
         require_once $path;
