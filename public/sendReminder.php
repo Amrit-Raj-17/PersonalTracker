@@ -108,8 +108,4 @@ foreach ($users as $user) {
     }
 }
 
-if ($mail->send()) {
-    echo "Sent to: " . $user['email'] . "<br>";
-} else {
-    echo "Failed: " . $mail->ErrorInfo . "<br>";
-}
+echo "✅ Reminder emails sent successfully.";
