@@ -113,7 +113,7 @@ foreach ($users as $user) {
         sleep(1);
 
     } catch (Exception $e) {
-        error_log("Mail failed for {$user['email']}: " . $mail->ErrorInfo);
+        echo "❌ Mail failed for {$user['email']}: " . $mail->ErrorInfo . "<br>";
     }
 }
 
