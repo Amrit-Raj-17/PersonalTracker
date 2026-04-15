@@ -73,7 +73,7 @@ foreach ($users as $user) {
     $apiKey = getenv('RESEND_API_KEY');
 
     $data = [
-        "from" => "onboarding@resend.dev", // default test sender
+        "from" => "workTraker@work.in",
         "to" => [$user['email']],
         "subject" => $subject,
         "html" => $body
