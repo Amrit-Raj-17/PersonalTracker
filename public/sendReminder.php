@@ -40,6 +40,11 @@ foreach ($users as $user) {
     $overdue = $taskData['overdue_tasks'] ?? 0;
     $dueToday = $taskData['due_today_tasks'] ?? 0;
 
+    print_r($pending);
+    print_r($overdue);
+    print_r($dueToday);
+    print_r($user);
+
     // ⛔ Skip users with no tasks
     if ($pending == 0) continue;
 
