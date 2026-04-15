@@ -68,6 +68,8 @@ foreach ($users as $user) {
             $mail->Subject = "📅 {$dueToday} Tasks Due Today";
         }
 
+        print_r($mail->Subject);
+
         // 🔥 Messages
         $overdueMsg = "";
         if ($overdue > 0) {
