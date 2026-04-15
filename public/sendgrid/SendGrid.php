@@ -6,6 +6,8 @@
  *
  * @package SendGrid\Mail
  */
+use SendGrid\BaseSendGridClientInterface
+
 class SendGrid extends BaseSendGridClientInterface
 {
     /**
