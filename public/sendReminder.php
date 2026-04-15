@@ -40,6 +40,11 @@ foreach ($users as $user) {
     $overdue = $taskData['overdue_tasks'] ?? 0;
     $dueToday = $taskData['due_today_tasks'] ?? 0;
 
+    print_r($pending);
+    print_r($overdue);
+    print_r($dueToday);
+    print_r($user);
+
     // ⛔ Skip users with no tasks
     if ($pending == 0) continue;
 
@@ -62,6 +67,8 @@ foreach ($users as $user) {
         } else {
             $mail->Subject = "📅 {$dueToday} Tasks Due Today";
         }
+
+        print_r($mail->Subject);
 
         // 🔥 Messages
         $overdueMsg = "";
@@ -100,11 +107,13 @@ foreach ($users as $user) {
         // ✅ Send
         $mail->send();
 
+        print_r("mail sent to: {$user['email']}");
+
         // ⚡ small delay to avoid server stress
         sleep(1);
 
     } catch (Exception $e) {
-        error_log("Mail failed for {$user['email']}: " . $mail->ErrorInfo);
+        echo "❌ Mail failed for {$user['email']}: " . $mail->ErrorInfo . "<br>";
     }
 }
 
