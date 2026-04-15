@@ -8,7 +8,7 @@ spl_autoload_register(function ($class) {
         return;
     }
 
-    $baseDir = __DIR__ . '/sendgrid/SendGrid/';
+    $baseDir = __DIR__ . '/sendgrid/';
 
     $file = $baseDir . str_replace('\\', '/', $class) . '.php';
 
