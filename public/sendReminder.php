@@ -1,31 +1,29 @@
 <?php
 require __DIR__ . '/../includes/db.php';
 
-// ✅ Manual autoloader for SendGrid
-spl_autoload_register(function ($class) {
+// Load SendGrid manually
+function loadSendGrid($dir) {
+    foreach (scandir($dir) as $file) {
+        if ($file === '.' || $file === '..') continue;
 
-    // Convert namespace to file path
-    $prefix = 'SendGrid\\';
-    $base_dir = __DIR__ . '/../sendgrid/';
+        $fullPath = $dir . '/' . $file;
 
-    $len = strlen($prefix);
-    if (strncmp($prefix, $class, $len) !== 0) {
-        return;
+        if (is_dir($fullPath)) {
+            loadSendGrid($fullPath);
+        } else {
+            if (pathinfo($fullPath, PATHINFO_EXTENSION) === 'php') {
+                require_once $fullPath;
+            }
+        }
     }
+}
 
-    $relative_class = substr($class, $len);
-
-    $file = $base_dir . str_replace('\\', '/', $relative_class) . '.php';
-
-    if (file_exists($file)) {
-        require $file;
-    }
-});
+loadSendGrid(__DIR__ . '/../sendgrid');
 
 use SendGrid\Mail\Mail;
 
 $email = new Mail();
-$email->setFrom("thakur.amritraj38@gmail.com@gmail.com", "Test");
+$email->setFrom("thakur.amritraj38@gmail.com", "Test");
 $email->setSubject("Manual Test");
 $email->addTo("amritrajt15@gmail.com", "You");
 $email->addContent("text/html", "<h1>It works!</h1>");
