@@ -4,22 +4,20 @@ require __DIR__ . '/../includes/db.php';
 // ✅ Proper PSR-4 style autoloader for SendGrid
 spl_autoload_register(function ($class) {
 
-    // Only handle SendGrid namespace
-    if (strpos($class, 'SendGrid\\') !== 0) {
+    if (strpos($class, 'SendGrid') !== 0) {
         return;
     }
 
-    // Convert namespace → file path
-    $path = __DIR__ . '/sendgrid/' . str_replace('\\', '/', $class) . '.php';
+    $baseDir = __DIR__ . '/sendgrid/';
 
-    if (file_exists($path)) {
-        require_once $path;
+    $file = $baseDir . str_replace('\\', '/', $class) . '.php';
+
+    if (file_exists($file)) {
+        require_once $file;
     } else {
-        echo "Missing: " . $path . "<br>"; // debug (remove later)
+        echo "Missing: " . $file . "<br>";
     }
 });
-
-// loadSendGrid(__DIR__ . '/../sendgrid');
 
 use SendGrid\Mail\Mail;
 
