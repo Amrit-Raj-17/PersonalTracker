@@ -19,7 +19,6 @@ spl_autoload_register(function ($class) {
     }
 });
 
-
 // loadSendGrid(__DIR__ . '/../sendgrid');
 
 use SendGrid\Mail\Mail;
