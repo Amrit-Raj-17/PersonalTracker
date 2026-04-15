@@ -17,8 +17,17 @@ foreach ($users as $user) {
     $taskStmt = $pdo->prepare("
         SELECT 
             COUNT(*) AS pending_tasks,
-            COUNT(CASE WHEN due_date < CURRENT_DATE THEN 1 END) AS overdue_tasks,
-            COUNT(CASE WHEN due_date = CURRENT_DATE THEN 1 END) AS due_today_tasks
+
+            COUNT(CASE 
+                WHEN due_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date 
+                THEN 1 
+            END) AS overdue_tasks,
+
+            COUNT(CASE 
+                WHEN due_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date 
+                THEN 1 
+            END) AS due_today_tasks
+
         FROM tasks
         WHERE user_id = ? AND completed = false
     ");
