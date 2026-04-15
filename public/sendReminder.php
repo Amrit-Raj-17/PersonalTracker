@@ -57,9 +57,9 @@ foreach ($users as $user) {
         $mail->SMTPAuth = true;
         $mail->Username = $_ENV['MAIL_USER'];
         $mail->Password = $_ENV['MAIL_PASS'];
-        $mail->SMTPSecure = 'tls';
-        $mail->Port = 587;
-        $mail->Timeout = 10;
+        $mail->SMTPSecure = 'ssl';
+        $mail->Port = 465;
+        $mail->Timeout = 30;
 
         // 🔥 Dynamic subject
         if ($overdue > 0) {
