@@ -7,46 +7,46 @@ require __DIR__ . '/../includes/phpmailer/Exception.php';
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// 🔐 सुरक्षा (Cron protection)
+// 🔐 Cron protection
 if (!isset($_GET['key']) || $_GET['key'] !== $_ENV['CRON_SECRET']) {
     http_response_code(403);
     exit("Unauthorized");
 }
 
-// ✅ Fetch users with task stats
-$stmt = $pdo->query("
-    SELECT u.id, u.name, u.email,
-
-           COUNT(t.id) AS pending_tasks,
-
-           SUM(CASE 
-                WHEN t.due_date < CURRENT_DATE THEN 1 
-                ELSE 0 
-           END) AS overdue_tasks,
-
-           SUM(CASE 
-                WHEN t.due_date = CURRENT_DATE THEN 1 
-                ELSE 0 
-           END) AS due_today_tasks
-
-    FROM users u
-    JOIN tasks t
-        ON u.id = t.user_id
-
-    WHERE t.completed = false
-
-    GROUP BY u.id, u.name, u.email
-");
-
+// ✅ Get all users
+$stmt = $pdo->query("SELECT id, name, email FROM users");
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// ✅ Loop through users
+// ✅ Loop users (FAST APPROACH)
 foreach ($users as $user) {
+
+    // 🔥 Per-user optimized query (very fast)
+    $taskStmt = $pdo->prepare("
+        SELECT 
+            COUNT(*) AS pending_tasks,
+
+            COUNT(CASE WHEN due_date < CURRENT_DATE THEN 1 END) AS overdue_tasks,
+
+            COUNT(CASE WHEN due_date = CURRENT_DATE THEN 1 END) AS due_today_tasks
+
+        FROM tasks
+        WHERE user_id = ? AND completed = false
+    ");
+
+    $taskStmt->execute([$user['id']]);
+    $taskData = $taskStmt->fetch(PDO::FETCH_ASSOC);
+
+    $pending = $taskData['pending_tasks'] ?? 0;
+    $overdue = $taskData['overdue_tasks'] ?? 0;
+    $dueToday = $taskData['due_today_tasks'] ?? 0;
+
+    // ⛔ Skip users with no tasks
+    if ($pending == 0) continue;
 
     $mail = new PHPMailer(true);
 
     try {
-        // 🔥 SMTP Config
+        // ⚡ SMTP Config (with timeout)
         $mail->isSMTP();
         $mail->Host = 'smtp.gmail.com';
         $mail->SMTPAuth = true;
@@ -54,13 +54,9 @@ foreach ($users as $user) {
         $mail->Password = $_ENV['MAIL_PASS'];
         $mail->SMTPSecure = 'tls';
         $mail->Port = 587;
+        $mail->Timeout = 10;
 
-        // ✅ Values
-        $pending = $user['pending_tasks'] ?? 0;
-        $overdue = $user['overdue_tasks'] ?? 0;
-        $dueToday = $user['due_today_tasks'] ?? 0;
-
-        // 🔥 Dynamic Subject
+        // 🔥 Dynamic subject
         if ($overdue > 0) {
             $mail->Subject = "⚠️ {$overdue} Overdue | {$dueToday} Due Today";
         } else {
@@ -101,8 +97,11 @@ foreach ($users as $user) {
             </a>
         ";
 
-        // ✅ Send mail
+        // ✅ Send
         $mail->send();
+
+        // ⚡ small delay to avoid server stress
+        sleep(1);
 
     } catch (Exception $e) {
         error_log("Mail failed for {$user['email']}: " . $mail->ErrorInfo);
