@@ -114,6 +114,7 @@ foreach ($users as $user) {
         sleep(1);
 
     } catch (Exception $e) {
+        var_dump(fsockopen("smtp.gmail.com", 587, $errno, $errstr, 5));
         echo "❌ Mail failed for {$user['email']}: " . $mail->ErrorInfo . "<br>";
     }
 }
