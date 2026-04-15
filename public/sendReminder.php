@@ -105,7 +105,7 @@ foreach ($users as $user) {
         // ✅ Send
         $mail->send();
 
-        print_r("mail sent to: {$user['email']}")
+        print_r("mail sent to: {$user['email']}");
 
         // ⚡ small delay to avoid server stress
         sleep(1);
