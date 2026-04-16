@@ -13,6 +13,8 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $apiKey = getenv('BREVO_API_KEY');
 
+print_r($apiKey);
+
 foreach ($users as $user) {
 
     // 📊 Task stats
