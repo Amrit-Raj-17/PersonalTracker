@@ -7,27 +7,26 @@ if (!isset($_GET['key']) || $_GET['key'] !== getenv('CRON_SECRET')) {
     exit("Unauthorized");
 }
 
-// ✅ Get all users
+// 📅 Get all users
 $stmt = $pdo->query("SELECT id, name, email FROM users");
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+$apiKey = getenv('BREVO_API_KEY');
+
 foreach ($users as $user) {
 
-    // ✅ Task stats
+    // 📊 Task stats
     $taskStmt = $pdo->prepare("
         SELECT 
             COUNT(*) AS pending_tasks,
-
             COUNT(CASE 
                 WHEN due_date < (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date 
                 THEN 1 
             END) AS overdue_tasks,
-
             COUNT(CASE 
                 WHEN due_date = (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date 
                 THEN 1 
             END) AS due_today_tasks
-
         FROM tasks
         WHERE user_id = ? AND completed = false
     ");
@@ -42,14 +41,14 @@ foreach ($users as $user) {
     // ⛔ Skip if no tasks
     if ($pending == 0) continue;
 
-    // 🔥 Subject
+    // 📩 Subject
     if ($overdue > 0) {
         $subject = "⚠️ {$overdue} Overdue | {$dueToday} Due Today";
     } else {
         $subject = "📅 {$dueToday} Tasks Due Today";
     }
 
-    // 🔥 Body
+    // 🧾 Email body
     $body = "
         <h3>Hello {$user['name']},</h3>
         <p>You have <b>{$pending}</b> pending tasks.</p>
@@ -69,20 +68,26 @@ foreach ($users as $user) {
         <a href='https://personaltracker-8wwb.onrender.com/'>Open Tracker</a>
     ";
 
-    // 🚀 RESEND API CALL
-    $apiKey = getenv('RESEND_API_KEY');
-
+    // 🚀 BREVO API CALL
     $data = [
-        "from" => "onboarding@resend.dev",
-        "to" => [$user['email']],
+        "sender" => [
+            "name" => "Work Tracker",
+            "email" => "amritrajt15@gmail.com" // MUST be verified in Brevo
+        ],
+        "to" => [
+            [
+                "email" => $user['email'],
+                "name" => $user['name']
+            ]
+        ],
         "subject" => $subject,
-        "html" => $body
+        "htmlContent" => $body
     ];
 
-    $ch = curl_init("https://api.resend.com/emails");
+    $ch = curl_init("https://api.brevo.com/v3/smtp/email");
 
     curl_setopt($ch, CURLOPT_HTTPHEADER, [
-        "Authorization: Bearer $apiKey",
+        "api-key: $apiKey",
         "Content-Type: application/json"
     ]);
 
@@ -91,16 +96,21 @@ foreach ($users as $user) {
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
 
     $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
     if (curl_errno($ch)) {
         echo "❌ Curl error for {$user['email']}: " . curl_error($ch) . "<br>";
     } else {
-        echo "✅ Sent to {$user['email']}<br>";
+        if ($httpCode == 201) {
+            echo "✅ Sent to {$user['email']}<br>";
+        } else {
+            echo "❌ Failed for {$user['email']} | Response: $response<br>";
+        }
     }
 
     curl_close($ch);
 
-    sleep(1);
+    sleep(1); // avoid rate limit
 }
 
-echo "🎉 All reminders sent.";
+echo "🎉 All reminders processed.";
