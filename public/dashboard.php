@@ -424,6 +424,77 @@ $activePage = 'dashboard';
             <a href="notes.php" class="btn btn-ghost btn-sm">View all →</a>
         </div>
 
+        <?php if (empty($notes)): ?>
+            <div class="empty-state" style="margin-bottom:28px;">
+                <h3>No notes yet</h3>
+                <p>Head over to <a href="notes.php" style="color:var(--accent)">Notes</a> to jot something down.</p>
+            </div>
+        <?php else: ?>
+            <div class="notes-grid">
+                <?php foreach ($notes as $note):
+                    $colors = ['yellow','blue','green','pink'];
+                    $c = in_array($note['color'], $colors) ? $note['color'] : 'yellow';
+                ?>
+                    <div class="note-card <?= $c ?>">
+                        <h4><?= htmlspecialchars($note['title']) ?></h4>
+                        <p><?= nl2br(htmlspecialchars(mb_substr($note['content'] ?? '', 0, 150))) ?><?= strlen($note['content'] ?? '') > 150 ? '…' : '' ?></p>
+                        <div class="note-meta">
+                            <?php if ($role === 'admin' && isset($note['user_name'])): ?>
+                                <span class="note-owner"><?= htmlspecialchars($note['user_name']) ?></span>
+                            <?php else: ?>
+                                <span><?= date('d M', strtotime($note['created_at'])) ?></span>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
+        <!-- Active Tasks -->
+        <div class="section-heading">
+            Active Tasks
+            <a href="tasks.php" class="btn btn-ghost btn-sm">Manage →</a>
+        </div>
+
+        <?php if (empty($tasks)): ?>
+            <div class="empty-state">
+                <h3>No active tasks</h3>
+                <p>Great job! Or <a href="tasks.php" style="color:var(--accent)">create a new task</a>.</p>
+            </div>
+        <?php else: ?>
+            <div class="task-list">
+                <?php foreach ($tasks as $task):
+                    $pClass = 'priority-' . strtolower($task['priority']);
+                    $sClass = 'status-' . strtolower(str_replace(' ', '-', $task['status']));
+                ?>
+                    <div class="task-card">
+                        <div class="task-header">
+                            <span style="font-size:15px;font-weight:600;flex:1;"><?= htmlspecialchars($task['title']) ?></span>
+                            <?php if ($role === 'admin' && isset($task['user_name'])): ?>
+                                <span class="task-owner"><?= htmlspecialchars($task['user_name']) ?></span>
+                            <?php endif; ?>
+                            <span class="badge <?= $pClass ?>"><?= htmlspecialchars($task['priority']) ?></span>
+                            <span class="badge <?= $sClass ?>"><?= htmlspecialchars($task['status']) ?></span>
+                        </div>
+                        <?php if (!empty($task['description'])): ?>
+                            <p style="color:var(--muted);font-size:13px;margin:6px 0 10px;">
+                                <?= nl2br(htmlspecialchars(mb_substr($task['description'], 0, 120))) ?><?= strlen($task['description']) > 120 ? '…' : '' ?>
+                            </p>
+                        <?php endif; ?>
+                        <div class="progress-bar">
+                            <div class="progress-fill" data-progress="<?= $task['progress'] ?>"></div>
+                        </div>
+                        <div style="display:flex;justify-content:space-between;margin-top:6px;">
+                            <small style="color:var(--muted);font-size:11px;"><?= $task['progress'] ?>% complete</small>
+                            <?php if (!empty($task['due_date'])): ?>
+                                <small style="color:var(--muted);font-size:11px;">Due <?= date('d M Y', strtotime($task['due_date'])) ?></small>
+                            <?php endif; ?>
+                        </div>
+                    </div>
+                <?php endforeach; ?>
+            </div>
+        <?php endif; ?>
+
         <!-- Daily Checklist -->
         <div class="todo-section">
             <div class="todo-header">
@@ -615,77 +686,6 @@ $activePage = 'dashboard';
             <?php endif; ?>
         </div>
 
-
-        <?php if (empty($notes)): ?>
-            <div class="empty-state" style="margin-bottom:28px;">
-                <h3>No notes yet</h3>
-                <p>Head over to <a href="notes.php" style="color:var(--accent)">Notes</a> to jot something down.</p>
-            </div>
-        <?php else: ?>
-            <div class="notes-grid">
-                <?php foreach ($notes as $note):
-                    $colors = ['yellow','blue','green','pink'];
-                    $c = in_array($note['color'], $colors) ? $note['color'] : 'yellow';
-                ?>
-                    <div class="note-card <?= $c ?>">
-                        <h4><?= htmlspecialchars($note['title']) ?></h4>
-                        <p><?= nl2br(htmlspecialchars(mb_substr($note['content'] ?? '', 0, 150))) ?><?= strlen($note['content'] ?? '') > 150 ? '…' : '' ?></p>
-                        <div class="note-meta">
-                            <?php if ($role === 'admin' && isset($note['user_name'])): ?>
-                                <span class="note-owner"><?= htmlspecialchars($note['user_name']) ?></span>
-                            <?php else: ?>
-                                <span><?= date('d M', strtotime($note['created_at'])) ?></span>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
-
-        <!-- Active Tasks -->
-        <div class="section-heading">
-            Active Tasks
-            <a href="tasks.php" class="btn btn-ghost btn-sm">Manage →</a>
-        </div>
-
-        <?php if (empty($tasks)): ?>
-            <div class="empty-state">
-                <h3>No active tasks</h3>
-                <p>Great job! Or <a href="tasks.php" style="color:var(--accent)">create a new task</a>.</p>
-            </div>
-        <?php else: ?>
-            <div class="task-list">
-                <?php foreach ($tasks as $task):
-                    $pClass = 'priority-' . strtolower($task['priority']);
-                    $sClass = 'status-' . strtolower(str_replace(' ', '-', $task['status']));
-                ?>
-                    <div class="task-card">
-                        <div class="task-header">
-                            <span style="font-size:15px;font-weight:600;flex:1;"><?= htmlspecialchars($task['title']) ?></span>
-                            <?php if ($role === 'admin' && isset($task['user_name'])): ?>
-                                <span class="task-owner"><?= htmlspecialchars($task['user_name']) ?></span>
-                            <?php endif; ?>
-                            <span class="badge <?= $pClass ?>"><?= htmlspecialchars($task['priority']) ?></span>
-                            <span class="badge <?= $sClass ?>"><?= htmlspecialchars($task['status']) ?></span>
-                        </div>
-                        <?php if (!empty($task['description'])): ?>
-                            <p style="color:var(--muted);font-size:13px;margin:6px 0 10px;">
-                                <?= nl2br(htmlspecialchars(mb_substr($task['description'], 0, 120))) ?><?= strlen($task['description']) > 120 ? '…' : '' ?>
-                            </p>
-                        <?php endif; ?>
-                        <div class="progress-bar">
-                            <div class="progress-fill" data-progress="<?= $task['progress'] ?>"></div>
-                        </div>
-                        <div style="display:flex;justify-content:space-between;margin-top:6px;">
-                            <small style="color:var(--muted);font-size:11px;"><?= $task['progress'] ?>% complete</small>
-                            <?php if (!empty($task['due_date'])): ?>
-                                <small style="color:var(--muted);font-size:11px;">Due <?= date('d M Y', strtotime($task['due_date'])) ?></small>
-                            <?php endif; ?>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        <?php endif; ?>
     </main>
 </div>
 </body>
