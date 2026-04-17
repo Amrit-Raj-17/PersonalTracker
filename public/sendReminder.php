@@ -13,8 +13,6 @@ $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $apiKey = getenv('BREVO_API_KEY');
 
-print_r($apiKey);
-
 foreach ($users as $user) {
 
     // 📊 Task stats
@@ -43,6 +41,19 @@ foreach ($users as $user) {
     // ⛔ Skip if no tasks
     if ($pending == 0) continue;
 
+    // 📋 Fetch task names (overdue + due today)
+    $listStmt = $pdo->prepare("
+        SELECT title, due_date
+        FROM tasks
+        WHERE user_id = ?
+          AND completed = false
+          AND due_date <= (CURRENT_TIMESTAMP AT TIME ZONE 'Asia/Kolkata')::date
+        ORDER BY due_date ASC
+    ");
+
+    $listStmt->execute([$user['id']]);
+    $tasksList = $listStmt->fetchAll(PDO::FETCH_ASSOC);
+
     // 📩 Subject
     if ($overdue > 0) {
         $subject = "⚠️ {$overdue} Overdue | {$dueToday} Due Today";
@@ -64,6 +75,35 @@ foreach ($users as $user) {
         $body .= "<p style='color:orange;'><b>📅 {$dueToday} due today.</b></p>";
     }
 
+    // 📋 Task list
+    if (!empty($tasksList)) {
+        $body .= "<h4>📝 Tasks:</h4><ul>";
+
+        $today = date('Y-m-d');
+
+        foreach ($tasksList as $t) {
+            $due = $t['due_date'];
+
+            if ($due < $today) {
+                $color = "red";
+                $label = "Overdue";
+            } elseif ($due == $today) {
+                $color = "orange";
+                $label = "Today";
+            } else {
+                $color = "black";
+                $label = "";
+            }
+
+            $body .= "<li style='color:$color;'>
+                        {$t['title']} 
+                        <small>($label - {$due})</small>
+                      </li>";
+        }
+
+        $body .= "</ul>";
+    }
+
     $body .= "
         <p>Stay consistent 💪</p>
         <br>
@@ -74,7 +114,7 @@ foreach ($users as $user) {
     $data = [
         "sender" => [
             "name" => "Work Tracker",
-            "email" => "amritrajt15@gmail.com" // MUST be verified in Brevo
+            "email" => "amritrajt15@gmail.com" // must be verified in Brevo
         ],
         "to" => [
             [
