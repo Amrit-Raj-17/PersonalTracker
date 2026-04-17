@@ -7,11 +7,18 @@ if (!isset($_GET['key']) || $_GET['key'] !== getenv('CRON_SECRET')) {
     exit("Unauthorized");
 }
 
-// 📅 Get all users
+// 👇 Admin emails
+$admins = [
+    ["email" => "amritrajt15@gmail.com", "name" => "Admin"]
+];
+
 $stmt = $pdo->query("SELECT id, name, email FROM users");
 $users = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $apiKey = getenv('BREVO_API_KEY');
+
+// 📊 Admin summary data
+$adminBody = "<h2>📊 Daily Task Summary</h2>";
 
 foreach ($users as $user) {
 
@@ -38,10 +45,9 @@ foreach ($users as $user) {
     $overdue = $task['overdue_tasks'] ?? 0;
     $dueToday = $task['due_today_tasks'] ?? 0;
 
-    // ⛔ Skip if no tasks
     if ($pending == 0) continue;
 
-    // 📋 Fetch task names (overdue + due today)
+    // 📋 Task list
     $listStmt = $pdo->prepare("
         SELECT title, due_date
         FROM tasks
@@ -61,7 +67,7 @@ foreach ($users as $user) {
         $subject = "📅 {$dueToday} Tasks Due Today";
     }
 
-    // 🧾 Email body
+    // 🧾 User email body
     $body = "
         <h3>Hello {$user['name']},</h3>
         <p>You have <b>{$pending}</b> pending tasks.</p>
@@ -75,7 +81,6 @@ foreach ($users as $user) {
         $body .= "<p style='color:orange;'><b>📅 {$dueToday} due today.</b></p>";
     }
 
-    // 📋 Task list
     if (!empty($tasksList)) {
         $body .= "<h4>📝 Tasks:</h4><ul>";
 
@@ -110,18 +115,45 @@ foreach ($users as $user) {
         <a href='https://personaltracker-8wwb.onrender.com/'>Open Tracker</a>
     ";
 
-    // 🚀 BREVO API CALL
+    // 🚀 Send to USER
+    sendMail($apiKey, $subject, $body, [
+        [
+            "email" => $user['email'],
+            "name" => $user['name']
+        ]
+    ]);
+
+    // 📊 Append to admin summary
+    $adminBody .= "<hr>";
+    $adminBody .= "<h3>{$user['name']} ({$user['email']})</h3>";
+    $adminBody .= "<p>Pending: {$pending} | Overdue: {$overdue} | Today: {$dueToday}</p>";
+
+    if (!empty($tasksList)) {
+        $adminBody .= "<ul>";
+        foreach ($tasksList as $t) {
+            $adminBody .= "<li>{$t['title']} ({$t['due_date']})</li>";
+        }
+        $adminBody .= "</ul>";
+    }
+}
+
+// 🚀 Send ONE email to admins
+sendMail($apiKey, "📊 Daily Task Summary (All Users)", $adminBody, $admins);
+
+echo "🎉 All reminders + admin summary sent.";
+
+
+// =======================
+// 🔧 Mail Function
+// =======================
+function sendMail($apiKey, $subject, $body, $recipients) {
+
     $data = [
         "sender" => [
             "name" => "Work Tracker",
-            "email" => "amritrajt15@gmail.com" // must be verified in Brevo
+            "email" => "amritrajt15@gmail.com"
         ],
-        "to" => [
-            [
-                "email" => $user['email'],
-                "name" => $user['name']
-            ]
-        ],
+        "to" => $recipients,
         "subject" => $subject,
         "htmlContent" => $body
     ];
@@ -141,18 +173,15 @@ foreach ($users as $user) {
     $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
 
     if (curl_errno($ch)) {
-        echo "❌ Curl error for {$user['email']}: " . curl_error($ch) . "<br>";
+        echo "❌ Curl error: " . curl_error($ch) . "<br>";
     } else {
         if ($httpCode == 201) {
-            echo "✅ Sent to {$user['email']}<br>";
+            echo "✅ Mail sent<br>";
         } else {
-            echo "❌ Failed for {$user['email']} | Response: $response<br>";
+            echo "❌ Failed | Response: $response<br>";
         }
     }
 
     curl_close($ch);
-
-    sleep(1); // avoid rate limit
+    sleep(1);
 }
-
-echo "🎉 All reminders processed.";
