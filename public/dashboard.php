@@ -418,6 +418,12 @@ $activePage = 'dashboard';
             </div>
         </div>
 
+        <!-- Notes Preview -->
+        <div class="section-heading">
+            Notes
+            <a href="notes.php" class="btn btn-ghost btn-sm">View all →</a>
+        </div>
+
         <!-- Daily Checklist -->
         <div class="todo-section">
             <div class="todo-header">
@@ -609,11 +615,6 @@ $activePage = 'dashboard';
             <?php endif; ?>
         </div>
 
-        <!-- Notes Preview -->
-        <div class="section-heading">
-            Notes
-            <a href="notes.php" class="btn btn-ghost btn-sm">View all →</a>
-        </div>
 
         <?php if (empty($notes)): ?>
             <div class="empty-state" style="margin-bottom:28px;">
