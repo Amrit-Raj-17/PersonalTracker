@@ -195,7 +195,7 @@ $activePage = 'dashboard';
             border: 1px solid var(--border);
             border-radius: var(--card-r);
             padding: 22px 24px;
-            margin-bottom: 28px;
+            margin-top: 28px;
         }
         .todo-header {
             display: flex;
