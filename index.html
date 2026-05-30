@@ -1,0 +1,25 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Personal Tracker</title>
+
+    <script src="js/auth.js"></script>
+</head>
+<body>
+
+    <div class="loading-container">
+        <h2>Loading...</h2>
+    </div>
+
+    <script>
+        if (isLoggedIn()) {
+            window.location.href = "/app/dashboard.html";
+        } else {
+            window.location.href = "/app/login.html";
+        }
+    </script>
+
+</body>
+</html>
