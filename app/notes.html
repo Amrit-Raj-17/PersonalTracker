@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Notes</title>
+
+    <link rel="stylesheet"
+          href="../css/style.css">
+
+    <script src="../js/auth.js"></script>
+    <script src="../js/common.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/notes.js" defer></script>
+
+</head>
+
+<body>
+
+<div id="header"></div>
+
+<main class="notes-page">
+
+    <div class="page-header">
+
+        <h1>Notes</h1>
+
+        <button id="createNoteBtn">
+            + New Note
+        </button>
+
+    </div>
+
+    <div class="notes-toolbar">
+
+        <input
+            type="text"
+            id="searchNote"
+            placeholder="Search notes..."
+        >
+
+        <select id="pinFilter">
+
+            <option value="">
+                All Notes
+            </option>
+
+            <option value="PINNED">
+                Pinned Only
+            </option>
+
+            <option value="UNPINNED">
+                Unpinned Only
+            </option>
+
+        </select>
+
+    </div>
+
+    <div id="notesContainer">
+
+    </div>
+
+</main>
+
+<!-- Modal -->
+
+<div id="noteModal"
+     class="modal hidden">
+
+    <div class="modal-content">
+
+        <h2 id="noteModalTitle">
+            Create Note
+        </h2>
+
+        <form id="noteForm">
+
+            <input
+                type="hidden"
+                id="noteId"
+            >
+
+            <input
+                type="text"
+                id="noteTitle"
+                placeholder="Title"
+                required
+            >
+
+            <textarea
+                id="noteContent"
+                rows="8"
+                placeholder="Write your note..."
+                required
+            ></textarea>
+
+            <label>
+
+                <input
+                    type="checkbox"
+                    id="notePinned"
+                >
+
+                Pin this note
+
+            </label>
+
+            <button type="submit">
+                Save Note
+            </button>
+
+            <button
+                type="button"
+                id="closeNoteModal"
+            >
+                Cancel
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+<div id="footer"></div>
+
+</body>
+
+</html>

@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <meta charset="UTF-8">
+    <meta name="viewport"
+          content="width=device-width, initial-scale=1.0">
+
+    <title>Daily Goals</title>
+
+    <link rel="stylesheet"
+          href="../css/style.css">
+
+    <script src="../js/auth.js"></script>
+    <script src="../js/common.js"></script>
+    <script src="../js/api.js"></script>
+    <script src="../js/daily.js" defer></script>
+
+</head>
+
+<body>
+
+<div id="header"></div>
+
+<main class="daily-page">
+
+    <div class="page-header">
+
+        <h1>Daily Goals</h1>
+
+        <button id="addGoalBtn">
+            + Add Goal
+        </button>
+
+    </div>
+
+    <section class="daily-summary">
+
+        <div class="summary-card">
+
+            <h3>
+                Completed
+            </h3>
+
+            <div id="completedCount">
+                0
+            </div>
+
+        </div>
+
+        <div class="summary-card">
+
+            <h3>
+                Remaining
+            </h3>
+
+            <div id="remainingCount">
+                0
+            </div>
+
+        </div>
+
+        <div class="summary-card">
+
+            <h3>
+                Completion
+            </h3>
+
+            <div id="completionPercent">
+                0%
+            </div>
+
+        </div>
+
+    </section>
+
+    <div class="progress-bar">
+
+        <div id="dailyProgress">
+
+        </div>
+
+    </div>
+
+    <div id="dailyContainer">
+
+    </div>
+
+</main>
+
+<!-- Modal -->
+
+<div
+    id="goalModal"
+    class="modal hidden"
+>
+
+    <div class="modal-content">
+
+        <h2>
+            Add Daily Goal
+        </h2>
+
+        <form id="goalForm">
+
+            <input
+                type="text"
+                id="goalTitle"
+                placeholder="Goal Title"
+                required
+            >
+
+            <textarea
+                id="goalDescription"
+                placeholder="Description"
+            ></textarea>
+
+            <button type="submit">
+                Save Goal
+            </button>
+
+            <button
+                type="button"
+                id="closeGoalModal"
+            >
+                Cancel
+            </button>
+
+        </form>
+
+    </div>
+
+</div>
+
+<div id="footer"></div>
+
+</body>
+
+</html>
