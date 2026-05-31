@@ -15,16 +15,8 @@ async function apiRequest(
                 ...options,
 
                 headers: {
-
-                    "Content-Type":
-                        "application/json",
-
-                    Authorization:
-                        token
-                            ? `Bearer ${token}`
-                            : "",
-
-                    ...(options.headers || {})
+                    "Content-Type": "application/json",
+                    ...(token ? { Authorization: `Bearer ${token}` } : {})
                 }
             }
         );
