@@ -52,12 +52,10 @@ async function loadDashboard() {
 
     try {
 
-        const res =
+        const data =
             await apiRequest(
                 "/dashboard"
             );
-        
-        const data = await res.json();
 
         renderDailyStats(
             data.dailyStats
