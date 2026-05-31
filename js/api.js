@@ -1,4 +1,4 @@
-const API_BASE_URL = "http://localhost:8080/api";
+const API_BASE_URL = "http://upcountry-fastball-unrushed.ngrok-free.dev/api";
 
 async function apiRequest(
     endpoint,
