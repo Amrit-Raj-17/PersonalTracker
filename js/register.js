@@ -1,4 +1,3 @@
-const BASE = "/PersonalTracker";
 if (isLoggedIn()) {
 
     window.location.href = BASE +

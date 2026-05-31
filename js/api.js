@@ -16,7 +16,7 @@ async function apiRequest(
 
                 headers: {
                     "Content-Type": "application/json",
-                    "ngrok-skip-browser-warning": "true",   // ← ADD THIS
+                    "ngrok-skip-browser-warning": "true",
                     ...(token ? { Authorization: `Bearer ${token}` } : {})
                 }
             }
