@@ -97,8 +97,8 @@ document.addEventListener("DOMContentLoaded", async () => {
                     "user"
                 );
 
-                window.location.href =
-                    "/app/login.html";
+                window.location.href = 
+                    "PersonalTracker/app/login.html";
 
             }
         );

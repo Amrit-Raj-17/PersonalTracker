@@ -1,6 +1,8 @@
+const BASE = "/PersonalTracker";
+
 if (isLoggedIn()) {
 
-    window.location.href =
+    window.location.href = BASE +
         "/app/dashboard.html";
 
 }
@@ -69,7 +71,7 @@ if (loginForm) {
                     result.user.id
                 );
 
-                window.location.href =
+                window.location.href = BASE +
                     "/app/dashboard.html";
 
             } catch (err) {

@@ -1,3 +1,5 @@
+const BASE = "/PersonalTracker";
+
 function getToken() {
     return localStorage.getItem("jwt");
 }
@@ -7,7 +9,7 @@ function isLoggedIn() {
 }
 
 function redirectToLogin() {
-    window.location.href = "/app/login.html";
+    window.location.href = BASE + "/app/login.html";
 }
 
 function requireAuth() {
@@ -25,7 +27,7 @@ function requireAdmin() {
     const role = localStorage.getItem("role");
 
     if (role !== "ADMIN") {
-        window.location.href = "/app/dashboard.html";
+        window.location.href = BASE + "/app/dashboard.html";
         return false;
     }
 
